@@ -1,0 +1,157 @@
+[
+    {
+        "id": "7cf72ffc.4abd6",
+        "type": "tab",
+        "label": "GPS-Tracker"
+    },
+    {
+        "id": "f4d1b1cf.a3901",
+        "type": "debug",
+        "z": "7cf72ffc.4abd6",
+        "name": "",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "x": 667,
+        "y": 697,
+        "wires": []
+    },
+    {
+        "id": "7e0223ca.f4ef9c",
+        "type": "function",
+        "z": "7cf72ffc.4abd6",
+        "name": "Calculations",
+        "func": "\ngateways=msg.metadata.gateways.entries();\n\n//lat=((msg.payload[2]+256*msg.payload[1]+256*256*msg.payload[0])/16777215*180)-90;\n//long=((msg.payload[5]+256*msg.payload[4]+256*256*msg.payload[3])/16777215*360)-180;\nlat=msg.payload.lat;\nlong=msg.payload.lon;\n\nmax_lat=0;\nmax_long=0;\nmax_dist=0;\nmax_id=0;\n\nmax=0;\n\nfor (var i = 0, l = msg.metadata.gateways.length; i < l; i++) {\n    gateway_lat=msg.metadata.gateways[i].latitude;\n    gateway_long=msg.metadata.gateways[i].longitude;\n    gateway_id=msg.metadata.gateways[i].gtw_id;\n    dist=distance(lat,long,gateway_lat,gateway_long);\n    if (max<dist){\n        max_lat=gateway_lat;\n        max_long=gateway_long;\n        max_dist=dist;\n        max_id=gateway_id;\n    }\n}\n\nmsg.payload = [{\n    nodeLat: lat,\n    nodeLong: long,\n    lat:max_lat,\n    long: max_long,\n    dist: max_dist,\n    id: max_id\n},{\n    gateways: msg.metadata.gateways.length\n}]\nreturn msg;\n\n\nfunction distance(lat1, lon1, lat2, lon2) {\n  var p = 0.017453292519943295;    // Math.PI / 180\n  var c = Math.cos;\n  var a = 0.5 - c((lat2 - lat1) * p)/2 + \n          c(lat1 * p) * c(lat2 * p) * \n          (1 - c((lon2 - lon1) * p))/2;\n\n  return 12742 * Math.asin(Math.sqrt(a)); // 2 * R; R = 6371 km\n}",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 420,
+        "y": 680,
+        "wires": [
+            [
+                "f4d1b1cf.a3901",
+                "b8701131.4048d"
+            ]
+        ]
+    },
+    {
+        "id": "7d8b47ef.3395e8",
+        "type": "debug",
+        "z": "7cf72ffc.4abd6",
+        "name": "",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "x": 408,
+        "y": 763,
+        "wires": []
+    },
+    {
+        "id": "5d871abc.bf7764",
+        "type": "influxdb out",
+        "z": "7cf72ffc.4abd6",
+        "influxdb": "715f8163.d30bd",
+        "name": "Distance",
+        "measurement": "distance",
+        "precision": "",
+        "retentionPolicy": "",
+        "x": 952.5,
+        "y": 432,
+        "wires": []
+    },
+    {
+        "id": "b8701131.4048d",
+        "type": "switch",
+        "z": "7cf72ffc.4abd6",
+        "name": "",
+        "property": "payload[0].dist",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "gt",
+                "v": "10",
+                "vt": "str"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 1,
+        "x": 658.5,
+        "y": 572,
+        "wires": [
+            [
+                "5d871abc.bf7764",
+                "eac9ce1e.92a4b",
+                "77161758.e815e8"
+            ]
+        ]
+    },
+    {
+        "id": "eac9ce1e.92a4b",
+        "type": "debug",
+        "z": "7cf72ffc.4abd6",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 978,
+        "y": 596,
+        "wires": []
+    },
+    {
+        "id": "14bdb68c.f3c3c9",
+        "type": "ttn uplink",
+        "z": "7cf72ffc.4abd6",
+        "name": "LoRa-DX",
+        "app": "57bf21bc.8df38",
+        "dev_id": "ttgo-abp",
+        "field": "",
+        "x": 213,
+        "y": 689,
+        "wires": [
+            [
+                "7e0223ca.f4ef9c",
+                "7d8b47ef.3395e8"
+            ]
+        ]
+    },
+    {
+        "id": "77161758.e815e8",
+        "type": "e-mail",
+        "z": "7cf72ffc.4abd6",
+        "server": "smtp.gmail.com",
+        "port": "465",
+        "secure": true,
+        "tls": true,
+        "name": "whatever@gmail.com",
+        "dname": "Mail",
+        "x": 994.5,
+        "y": 510,
+        "wires": []
+    },
+    {
+        "id": "715f8163.d30bd",
+        "type": "influxdb",
+        "z": "",
+        "hostname": "127.0.0.1",
+        "port": "8086",
+        "protocol": "http",
+        "database": "gps",
+        "name": "",
+        "usetls": false,
+        "tls": ""
+    },
+    {
+        "id": "57bf21bc.8df38",
+        "type": "ttn app",
+        "z": "",
+        "appId": "lora-dx-abp",
+        "accessKey": "..........",
+        "discovery": "discovery.thethingsnetwork.org:1900"
+    }
+]
